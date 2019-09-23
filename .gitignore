@@ -29,3 +29,6 @@
 
 # Packet captures
 *.pcap
+
+# Generated Word documents
+*.docx
