@@ -1,0 +1,4 @@
+[submodule "clipd"]
+	path = clipd
+	url = git@github.com:Notgnoshi/clipd.git
+	branch = master
