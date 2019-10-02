@@ -28,7 +28,6 @@ class HttpListener(threading.Thread):
         self.logger.setLevel("DEBUG" if verbose else "INFO")
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
-        # TODO: Add a FileHandler?
         self.logger.addHandler(console_handler)
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,9 +41,8 @@ class HttpListener(threading.Thread):
         """Run the HTTP listener in the background."""
         while not self.is_canceled:
             connection, address = self.socket.accept()
-            # TODO: Larger requests?
-            request = connection.recv(1024)
-            self.requests.put_nowait((connection, address, request))
+            # Recv the data from the socket in another thread to avoid blocking this one as much as possible.
+            self.requests.put_nowait((connection, address))
 
     def stop(self):
         """Stop the HTTP listener."""

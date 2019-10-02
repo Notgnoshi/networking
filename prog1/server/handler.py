@@ -1,39 +1,46 @@
 import logging
-import threading
+from multiprocessing.pool import ThreadPool
+from pathlib import Path
 from queue import Queue
 
 from .logger import formatter
+from .request import HttpRequest
 
 
-class HttpRequestHandler(threading.Thread):
+class HttpRequestHandler:
     """Handle HTTP requests."""
 
-    def __init__(self, queue: Queue, verbose: bool):
+    def __init__(self, queue: Queue, webroot: Path, verbose: bool):
         """Create an HTTP request handler.
 
         :param queue: A queue of HTTP requests to handle.
         :param verbose: Increase output verbosity.
         """
-        super().__init__(name="HttpRequestHandler", daemon=True)
         self.requests = queue
+        self.webroot = webroot
         self.is_canceled = False
 
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.logger.setLevel("DEBUG" if verbose else "INFO")
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
-        # TODO: Add a FileHandler?
         self.logger.addHandler(console_handler)
 
+        self.pool: ThreadPool = None
+
+    def start(self):
+        """Start the request handler thread pool."""
         self.logger.debug("Starting HTTP request handler...")
+        # TODO: Start off with one worker thread. Expand when good and ready.
+        self.pool = ThreadPool(1, self.worker)
 
-    def run(self):
-        """Run the HTTP request handler in the background."""
+    def worker(self):
+        """Worker to asynchronously consume the requests queue."""
         while not self.is_canceled:
-            connection, address, request = self.requests.get(block=True, timeout=None)
-
-            self.logger.info("(%s) - %s", address[0], request)
-
+            connection, address = self.requests.get(block=True, timeout=None)
+            data = connection.recv(1024)
+            request = HttpRequest(data, verbose=True)
+            request.handle(self.webroot, connection, address)
             connection.close()
 
     def stop(self):

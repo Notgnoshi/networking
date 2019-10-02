@@ -27,7 +27,7 @@ class HttpServer:
         # TODO: Spawn several listeners and several handlers?
         # TODO: Change from inheriting Thread to using a ThreadPool?
         self.listener = HttpListener(self.port, self.address, self.requests, verbose)
-        self.handler = HttpRequestHandler(self.requests, verbose)
+        self.handler = HttpRequestHandler(self.requests, self.webroot, verbose)
 
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.logger.setLevel("DEBUG" if verbose else "INFO")
