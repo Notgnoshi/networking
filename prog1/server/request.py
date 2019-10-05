@@ -19,7 +19,6 @@ class HttpRequest:
         """
         self.request = BytesIO(request)
 
-        self.error_code = self.error_message = None
         self.client_address = None
         self.requestline = self.request.readline()
         self.method = None
@@ -33,6 +32,7 @@ class HttpRequest:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
+        self.status = None
         self.parse_request()
 
     def parse_request(self):
@@ -44,27 +44,11 @@ class HttpRequest:
         # Parse the request line.
         tokens = self.requestline.strip().split()
         if len(tokens) != 3:
-            self.logger.error("Failed to parse request: '%s'", self.requestline)
+            self.logger.error("Failed to parse request line: '%s'", self.requestline)
             self.status = HTTPStatus.BAD_REQUEST
             return
-        method, uri, version = tokens
 
-        # Only support GET, POST (both required), and HEAD methods.
-        if method not in {b"GET", b"POST", b"HEAD"}:
-            self.logger.error("Unsupported HTTP method: '%s'", method)
-            self.status = HTTPStatus.METHOD_NOT_ALLOWED
-            return
-        self.method = method
-
-        self.path = uri
-
-        # This isn't a fully compliant HTTP server for either versions,
-        # but accept HTTP 1.0 and 1.1 requests.
-        if version.lower() not in {b"http/1.0", b"http/1.1"}:
-            self.logger.error("Unsupported HTTP version: '%s'", version)
-            self.status = HTTPStatus.HTTP_VERSION_NOT_SUPPORTED
-            return
-        self.version = version
+        self.method, self.path, self.version = tokens
 
         for line in self.request.readlines():
             line = line.strip()
@@ -75,6 +59,33 @@ class HttpRequest:
                 self.headers[header] = value
 
     def handle(self, webroot: Path, connection: socket, address: Tuple[str, int]):
-        # TODO: Better logging?
-        # TODO: Log both the request and the response.
-        self.logger.info("(%s:%s) - %s %s %s", *address, self.method, str(self.path), self.version)
+        # Parsing failed.
+        if self.status is not None:
+            response = self.response(self.status, headers=None, body=None)
+            self.send(connection, response)
+
+        # Parse the request line.
+        # Determine if the request-URI is absolute or relative.
+        # If the URI is relative, and the Host header is missing, send HTTPStatus.BAD_REQUEST
+        # Determine if the URI exists
+        # If URI is a directory, look for index.html or generate one if autoindex is set.
+        # If URI is a file, send the file's raw bytes as a response
+
+        self.logger.debug("(%s:%s) - %s - %s %s", *address, self.method, self.path, self.version)
+
+    def handle_GET(self):
+        pass
+
+    def handle_POST(self):
+        pass
+
+    def response(
+        self, status: HTTPStatus, headers: dict = None, body: ByteString = None
+    ) -> ByteString:
+        """Generate the HTTP response with the given content."""
+        return b"HTTP/1.1 400 Bad request\r\n"
+
+    def send(self, connection, response):
+        """Send the given HTTP response message."""
+        self.logger.debug("Sending: %s", response)
+        connection.send(response)
