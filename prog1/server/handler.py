@@ -41,7 +41,9 @@ class HttpRequestHandler:
             data = connection.recv(1024)
             request = HttpRequest(data, verbose=True)
             request.handle(self.webroot, connection, address)
-            connection.close()
+            # Closing the connection early results in a large number of retransmissions?
+            # TODO: Close the connection once the response has been sent.
+            # connection.close()
 
     def stop(self):
         """Stop the HTTP request handler."""
