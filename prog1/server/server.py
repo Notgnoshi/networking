@@ -20,12 +20,14 @@ class HttpServer:
         """
         self.port = port
         self.address = address
-        self.webroot = webroot
+        self.webroot = webroot.resolve()
+
+        if not self.webroot.exists():
+            raise ValueError("The webroot must exist.")
+
         self.is_canceled = False
 
         self.requests = Queue()
-        # TODO: Spawn several listeners and several handlers?
-        # TODO: Change from inheriting Thread to using a ThreadPool?
         self.listener = HttpListener(self.port, self.address, self.requests, verbose)
         self.handler = HttpRequestHandler(self.requests, self.webroot, verbose)
 
@@ -33,7 +35,6 @@ class HttpServer:
         self.logger.setLevel("DEBUG" if verbose else "INFO")
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
-        # TODO: Add a FileHandler?
         self.logger.addHandler(console_handler)
 
     def run(self):
