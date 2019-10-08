@@ -11,7 +11,7 @@ from .request import HttpRequest
 class HttpRequestHandler:
     """Handle HTTP requests."""
 
-    def __init__(self, queue: Queue, webroot: Path, verbose: bool):
+    def __init__(self, queue: Queue, webroot: Path, threads: int, verbose: bool):
         """Create an HTTP request handler.
 
         :param queue: A queue of HTTP requests to handle.
@@ -27,13 +27,13 @@ class HttpRequestHandler:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
+        self.threads = threads
         self.pool: ThreadPool = None
 
     def start(self):
         """Start the request handler thread pool."""
         self.logger.debug("Starting HTTP request handler...")
-        # TODO: Commandline argument?
-        self.pool = ThreadPool(processes=1, initializer=self.worker, initargs=(self,))
+        self.pool = ThreadPool(processes=self.threads, initializer=self.worker, initargs=(self,))
 
     @staticmethod
     def worker(handler):

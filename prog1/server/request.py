@@ -22,7 +22,7 @@ class HttpRequest:
         # NOTE: Avoid creating a new logger for each request with the same name, because that
         # results in logging the same message many times.
         self.logger: logging.Logger = logger
-        self.logger.debug("Creating HttpRequest in thread %s", threading.get_ident())
+        self.logger.debug("Handling HttpRequest in thread %s", threading.get_ident())
 
         self.request = BytesIO(request)
 
