@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import threading
 from email.utils import formatdate
 from http import HTTPStatus
 from io import BytesIO
@@ -7,18 +8,21 @@ from pathlib import Path
 from socket import socket
 from typing import ByteString, Tuple
 
-from .logger import formatter
-
 
 class HttpRequest:
     """Parse and handle HTTP requests."""
 
-    def __init__(self, request: ByteString, verbose=False):
+    def __init__(self, request: ByteString, logger: logging.Logger):
         """Construct an HTTP request from the raw bytes.
 
         :param request: The bytestring of the request.
-        :param verbose: Increase output verbosity, defaults to False
+        :param logger: The logger to use for messages related to this request.
         """
+        # NOTE: Avoid creating a new logger for each request with the same name, because that
+        # results in logging the same message many times.
+        self.logger: logging.Logger = logger
+        self.logger.debug("Creating HttpRequest in thread %s", threading.get_ident())
+
         self.request = BytesIO(request)
 
         self.client_address = None
@@ -30,12 +34,6 @@ class HttpRequest:
         self.path: Path = None
         self.version = None
         self.headers = dict()
-
-        self.logger: logging.Logger = logging.getLogger(__name__)
-        self.logger.setLevel("DEBUG" if verbose else "INFO")
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        self.logger.addHandler(console_handler)
 
         self.status = None
         self.parse_request()
@@ -100,12 +98,12 @@ class HttpRequest:
     def send(self, connection, address, response):
         """Send the given HTTP response message."""
         # Log only the response line.
-        self.logger.info("Response (%s:%s) - %s", *address, response.split(b"\r\n")[0])
+        self.logger.info("Response to (%s:%s) - %s", *address, response.split(b"\r\n")[0])
         connection.send(response)
 
     def handle(self, webroot: Path, connection: socket, address: Tuple[str, int]):
-        # Parsing failed.
         if self.status is not None:
+            self.logger.error("Failed to parse requestline")
             response = self.response(self.status, headers=None, body=None)
             self.send(connection, address, response)
 
@@ -119,8 +117,9 @@ class HttpRequest:
             self.status = HTTPStatus.HTTP_VERSION_NOT_SUPPORTED
             response = self.response(self.status, headers=None, body=None)
             self.send(connection, address, response)
+            return
 
-        self.logger.info("Request (%s:%s) - %s", *address, self.requestline)
+        self.logger.info("Request from (%s:%s) - %s", *address, self.requestline)
 
         # Handle POST and GET messages (required by the HTTP/1.1 standard)
         if self.method == b"GET":
