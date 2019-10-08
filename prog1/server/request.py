@@ -136,10 +136,7 @@ class HttpRequest:
         # Here, we assume that every path is relative to the webroot.
         uri = self.uri.decode("utf-8", errors="ignore")
         # pathlib.Path.joinpath() shits its pants when the request URI begins with a `/`...
-        if uri.startswith("/"):
-            uri = uri[1:]
-
-        self.path = webroot / uri
+        self.path = webroot / Path(uri).relative_to("/")
         _path = self.path.resolve()
 
         # If URI is a directory, look for index.html or generate one if autoindex is set.
