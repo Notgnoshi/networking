@@ -31,19 +31,18 @@ class HttpRequestHandler:
     def start(self):
         """Start the request handler thread pool."""
         self.logger.debug("Starting HTTP request handler...")
-        # TODO: Start off with one worker thread. Expand when good and ready.
-        self.pool = ThreadPool(1, self.worker)
+        self.pool = ThreadPool(processes=1, initializer=self.worker, initargs=(self,))
 
-    def worker(self):
+    @staticmethod
+    def worker(handler):
         """Worker to asynchronously consume the requests queue."""
-        while not self.is_canceled:
-            connection, address = self.requests.get(block=True, timeout=None)
+        while not handler.is_canceled:
+            connection, address = handler.requests.get(block=True, timeout=None)
             data = connection.recv(1024)
             request = HttpRequest(data, verbose=True)
-            request.handle(self.webroot, connection, address)
-            # Closing the connection early results in a large number of retransmissions?
-            # TODO: Close the connection once the response has been sent.
-            # connection.close()
+            request.handle(handler.webroot, connection, address)
+            # TODO: Closing the connection early results in a large number of retransmissions?
+            connection.close()
 
     def stop(self):
         """Stop the HTTP request handler."""

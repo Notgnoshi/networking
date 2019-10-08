@@ -1,4 +1,6 @@
 import logging
+import mimetypes
+from email.utils import formatdate
 from http import HTTPStatus
 from io import BytesIO
 from pathlib import Path
@@ -22,7 +24,10 @@ class HttpRequest:
         self.client_address = None
         self.requestline = self.request.readline()
         self.method = None
-        self.path = None
+        # The raw request-URI
+        self.uri: bytes = None
+        # The request-URI resolved into a path.
+        self.path: Path = None
         self.version = None
         self.headers = dict()
 
@@ -48,7 +53,7 @@ class HttpRequest:
             self.status = HTTPStatus.BAD_REQUEST
             return
 
-        self.method, self.path, self.version = tokens
+        self.method, self.uri, self.version = tokens
 
         for line in self.request.readlines():
             line = line.strip()
@@ -58,34 +63,107 @@ class HttpRequest:
                 header, value = line[:idx], line[idx + 2 :]
                 self.headers[header] = value
 
+    @staticmethod
+    def response(status: HTTPStatus, headers: dict = None, body: ByteString = None) -> ByteString:
+        """Generate the HTTP response with the given content."""
+        response = f"HTTP/1.1 {status.value} {status.phrase}\r\n"
+
+        headers = dict() if headers is None else headers
+        if "Content-Length" not in headers:
+            headers["Content-Length"] = "0" if body is None else str(len(body))
+
+        if "Date" not in headers:
+            headers["Date"] = formatdate(timeval=None, localtime=False, usegmt=True)
+
+        if "Server" not in headers:
+            headers["Server"] = "httpserver.py/0.1 (class project)"
+
+        if "Connection" not in headers:
+            headers["Connection"] = "Closed"
+
+        if "Content-Encoding" not in headers:
+            headers["Content-Encoding"] = "utf-8"
+
+        # Default to HTML content if not set manually.
+        if "Content-Type" not in headers:
+            headers["Content-Type"] = "text/html"
+
+        for header, value in headers.items():
+            response += header + ": " + value + "\r\n"
+
+        response += "\r\n"
+        response = response.encode("utf-8")
+        response += b"" if body is None else body
+
+        return response
+
+    def send(self, connection, address, response):
+        """Send the given HTTP response message."""
+        # Log only the response line.
+        self.logger.info("Response (%s:%s) - %s", *address, response.split(b"\r\n")[0])
+        connection.send(response)
+
     def handle(self, webroot: Path, connection: socket, address: Tuple[str, int]):
         # Parsing failed.
         if self.status is not None:
             response = self.response(self.status, headers=None, body=None)
-            self.send(connection, response)
+            self.send(connection, address, response)
 
-        # Parse the request line.
+        if self.method not in {b"GET", b"POST"}:
+            self.status = HTTPStatus.METHOD_NOT_ALLOWED
+            response = self.response(self.status, headers=None, body=None)
+            self.send(connection, address, response)
+            return
+
+        if self.version.lower() not in {b"http/1.0", b"http/1.1"}:
+            self.status = HTTPStatus.HTTP_VERSION_NOT_SUPPORTED
+            response = self.response(self.status, headers=None, body=None)
+            self.send(connection, address, response)
+
+        self.logger.info("Request (%s:%s) - %s", *address, self.requestline)
+
+        # Handle POST and GET messages (required by the HTTP/1.1 standard)
+        if self.method == b"GET":
+            response = self.handle_GET(webroot)
+            self.send(connection, address, response)
+        elif self.method == b"POST":
+            response = self.handle_POST()
+            self.send(connection, address, response)
+
+    def handle_GET(self, webroot: Path) -> ByteString:
         # Determine if the request-URI is absolute or relative.
-        # If the URI is relative, and the Host header is missing, send HTTPStatus.BAD_REQUEST
-        # Determine if the URI exists
+        # NOTE: This is tricky, as it requires determining if the network host is present.
+        # Here, we assume that every path is relative to the webroot.
+        uri = self.uri.decode("utf-8", errors="ignore")
+        # pathlib.Path.joinpath() shits its pants when the request URI begins with a `/`...
+        if uri.startswith("/"):
+            uri = uri[1:]
+
+        self.path = webroot / uri
+        _path = self.path.resolve()
+
         # If URI is a directory, look for index.html or generate one if autoindex is set.
-        # If URI is a file, send the file's raw bytes as a response
+        if _path.is_dir():
+            self.logger.info("Requested directory. Redirecting to site index.")
+            _path = webroot / "index.html"
+        if not _path.exists():
+            _path = webroot / "404.html"
+            self.status = HTTPStatus.NOT_FOUND
+        else:
+            self.status = HTTPStatus.OK
 
-        self.logger.debug("(%s:%s) - %s - %s %s", *address, self.method, self.path, self.version)
+        headers = dict()
+        mime, encoding = mimetypes.guess_type(str(_path))
+        if mime is not None:
+            headers["Content-Type"] = mime
+        if encoding is not None:
+            headers["Content-Encoding"] = encoding
 
-    def handle_GET(self):
-        pass
+        with open(_path, "rb") as f:
+            # Must open as binary because the HTTP server doesn't care about its content, only raw bytes.
+            return self.response(self.status, headers=headers, body=f.read())
 
-    def handle_POST(self):
-        pass
+    def handle_POST(self) -> ByteString:
+        self.logger.error("error: %s - %s - %s - POST messages unsupported.")
 
-    def response(
-        self, status: HTTPStatus, headers: dict = None, body: ByteString = None
-    ) -> ByteString:
-        """Generate the HTTP response with the given content."""
-        return b"HTTP/1.1 400 Bad request\r\n"
-
-    def send(self, connection, response):
-        """Send the given HTTP response message."""
-        self.logger.debug("Sending: %s", response)
-        connection.send(response)
+        return self.response(HTTPStatus.OK, headers=None, body=None)
