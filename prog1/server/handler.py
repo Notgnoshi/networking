@@ -15,6 +15,8 @@ class HttpRequestHandler:
         """Create an HTTP request handler.
 
         :param queue: A queue of HTTP requests to handle.
+        :param webroot: The directory to serve content from.
+        :param threads: The number of threads to use to handle requests.
         :param verbose: Increase output verbosity.
         """
         self.requests = queue
@@ -36,7 +38,7 @@ class HttpRequestHandler:
         self.pool = ThreadPool(processes=self.threads, initializer=self.worker, initargs=(self,))
 
     @staticmethod
-    def worker(handler):
+    def worker(handler: "HttpRequestHandler"):
         """Worker to asynchronously consume the requests queue."""
         handler.logger.debug(
             "Starting HTTP request handler worker in thread %s...", threading.get_ident()

@@ -9,12 +9,13 @@ from .logger import formatter
 class HttpListener(threading.Thread):
     """A simple class to listen for HTTP requests."""
 
-    # TODO: Add better typing.
-    def __init__(self, port: int, address: str, queue: Queue, verbose):
+    def __init__(self, port: int, address: str, queue: Queue, connections: int, verbose: bool):
         """Create an HTTP listener.
 
         :param port: The port to listen on.
         :param address: The address to bind to.
+        :param queue: The Queue to use for sending requests to the HTTP request handler(s).
+        :param connections: The maximum number of socket connections to allow.
         :param verbose: Whether to increase output verbosity.
         """
         super().__init__(name="HttpListener", daemon=True)
@@ -32,8 +33,7 @@ class HttpListener(threading.Thread):
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((self.address, self.port))
-        # TODO: Commandline argument
-        self.socket.listen(100)
+        self.socket.listen(connections)
 
         self.logger.debug("Starting HTTP listener at %s:%d...", self.address, self.port)
 
