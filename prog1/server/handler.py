@@ -1,4 +1,5 @@
 import logging
+import threading
 from multiprocessing.pool import ThreadPool
 from pathlib import Path
 from queue import Queue
@@ -31,17 +32,20 @@ class HttpRequestHandler:
     def start(self):
         """Start the request handler thread pool."""
         self.logger.debug("Starting HTTP request handler...")
+        # TODO: Commandline argument?
         self.pool = ThreadPool(processes=1, initializer=self.worker, initargs=(self,))
 
     @staticmethod
     def worker(handler):
         """Worker to asynchronously consume the requests queue."""
+        handler.logger.debug(
+            "Starting HTTP request handler worker in thread %s...", threading.get_ident()
+        )
         while not handler.is_canceled:
             connection, address = handler.requests.get(block=True, timeout=None)
-            data = connection.recv(1024)
-            request = HttpRequest(data, verbose=True)
+            data = connection.recv(2048)
+            request = HttpRequest(data, handler.logger)
             request.handle(handler.webroot, connection, address)
-            # TODO: Closing the connection early results in a large number of retransmissions?
             connection.close()
 
     def stop(self):
