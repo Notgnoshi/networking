@@ -21,6 +21,9 @@ def parse_args():
         help="The server root directory to serve content from.",
     )
     parser.add_argument(
+        "--threads", "-t", type=int, default=2, help="Number of HTTP request handler threads."
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", default=False, help="Increase output verbosity."
     )
 
@@ -29,7 +32,11 @@ def parse_args():
 
 def main(args):
     server = HttpServer(
-        port=args.port, address=args.host, webroot=args.webroot, verbose=args.verbose
+        port=args.port,
+        address=args.host,
+        webroot=args.webroot,
+        threads=args.threads,
+        verbose=args.verbose,
     )
 
     try:

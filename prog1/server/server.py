@@ -10,7 +10,7 @@ from .logger import formatter
 class HttpServer:
     """A simple HTTP server."""
 
-    def __init__(self, port: int, address: str, webroot: pathlib.Path, verbose: bool):
+    def __init__(self, port: int, address: str, webroot: pathlib.Path, threads: int, verbose: bool):
         """Create a simple HTTP server to serve content from the given webroot.
 
         :param port: The port to listen to connections on.
@@ -29,7 +29,7 @@ class HttpServer:
 
         self.requests = Queue()
         self.listener = HttpListener(self.port, self.address, self.requests, verbose)
-        self.handler = HttpRequestHandler(self.requests, self.webroot, verbose)
+        self.handler = HttpRequestHandler(self.requests, self.webroot, threads, verbose)
 
         self.logger: logging.Logger = logging.getLogger(__name__)
         self.logger.setLevel("DEBUG" if verbose else "INFO")
