@@ -24,6 +24,9 @@ def parse_args():
         "--threads", "-t", type=int, default=2, help="Number of HTTP request handler threads."
     )
     parser.add_argument(
+        "--connections", type=int, default=10, help="The maximum number of connections to allow."
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", default=False, help="Increase output verbosity."
     )
 
@@ -36,6 +39,7 @@ def main(args):
         address=args.host,
         webroot=args.webroot,
         threads=args.threads,
+        connections = args.connections,
         verbose=args.verbose,
     )
 
