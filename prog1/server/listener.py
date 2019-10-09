@@ -41,7 +41,8 @@ class HttpListener(threading.Thread):
         """Run the HTTP listener in the background."""
         while not self.is_canceled:
             connection, address = self.socket.accept()
-            # Recv the data from the socket in another thread to avoid blocking this one as much as possible.
+            # Recv the data from the socket in another thread to avoid blocking
+            # this one as much as possible.
             self.requests.put_nowait((connection, address))
 
     def stop(self):

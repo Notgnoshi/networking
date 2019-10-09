@@ -39,7 +39,7 @@ def main(args):
         address=args.host,
         webroot=args.webroot,
         threads=args.threads,
-        connections = args.connections,
+        connections=args.connections,
         verbose=args.verbose,
     )
 
