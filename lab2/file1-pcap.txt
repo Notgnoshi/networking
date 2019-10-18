@@ -1,0 +1,52 @@
+No.     Time           Source                Destination           Protocol Length Info
+      6 0.001448357    10.0.0.2              10.0.0.1              HTTP     163    GET /HTTP-wireshark-file1.html HTTP/1.1
+
+Hypertext Transfer Protocol
+    GET /HTTP-wireshark-file1.html HTTP/1.1\r\n
+        [Expert Info (Chat/Sequence): GET /HTTP-wireshark-file1.html HTTP/1.1\r\n]
+            [GET /HTTP-wireshark-file1.html HTTP/1.1\r\n]
+            [Severity level: Chat]
+            [Group: Sequence]
+        Request Method: GET
+        Request URI: /HTTP-wireshark-file1.html
+        Request Version: HTTP/1.1
+    User-Agent: curl/7.35.0\r\n
+    Host: 10.0.0.1\r\n
+    Accept: */*\r\n
+    \r\n
+    [Full request URI: http://10.0.0.1/HTTP-wireshark-file1.html]
+    [HTTP request 1/1]
+    [Response in frame: 8]
+
+No.     Time           Source                Destination           Protocol Length Info
+      8 0.002718040    10.0.0.1              10.0.0.2              HTTP     565    HTTP/1.1 200 OK  (text/html)
+
+Hypertext Transfer Protocol
+    HTTP/1.1 200 OK\r\n
+        [Expert Info (Chat/Sequence): HTTP/1.1 200 OK\r\n]
+            [HTTP/1.1 200 OK\r\n]
+            [Severity level: Chat]
+            [Group: Sequence]
+        Response Version: HTTP/1.1
+        Status Code: 200
+        [Status Code Description: OK]
+        Response Phrase: OK
+    Date: Fri, 18 Oct 2019 19:19:20 GMT\r\n
+    Server: Apache/2.4.7 (Ubuntu)\r\n
+    Last-Modified: Fri, 11 Oct 2019 18:11:33 GMT\r\n
+    ETag: "f9-594a672b60d93"\r\n
+    Accept-Ranges: bytes\r\n
+    Content-Length: 249\r\n
+        [Content length: 249]
+    Vary: Accept-Encoding\r\n
+    Content-Type: text/html\r\n
+    \r\n
+    [HTTP response 1/1]
+    [Time since request: 0.001269683 seconds]
+    [Request in frame: 6]
+    File Data: 249 bytes
+Line-based text data: text/html (4 lines)
+    <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body class=" hasGoogleVoiceExt">Congratulations.  You've downloaded the file \n
+    http://www.mcs.sdsmt.edu/mqia/csc441/Lab2/HTTP-wireshark-file1.html!\n
+    \n
+    </body></html>
